@@ -4,16 +4,9 @@ import (
 	"net/http"
 	"slices"
 	"testing"
-	"time"
 
 	. "gopkg.in/check.v1"
 )
-
-const baseAddress = "http://balancer:8090"
-
-var client = http.Client{
-	Timeout: 3 * time.Second,
-}
 
 func TestBalancer(t *testing.T) {
 	// DONE: Реалізуйте юніт-тест для балансувальникка.
