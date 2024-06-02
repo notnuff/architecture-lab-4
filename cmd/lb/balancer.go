@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
+	"hash/fnv"
 	"io"
 	"log"
 	"net/http"
@@ -29,9 +31,9 @@ var (
 		"server3:8080",
 	}
 	serversStates = map[string]bool{
-		"server1:8080": false,
-		"server2:8080": false,
-		"server3:8080": false,
+		//"server1:8080": false,
+		//"server2:8080": false,
+		//"server3:8080": false,
 	}
 )
 
@@ -74,7 +76,7 @@ func forward(dst string, rw http.ResponseWriter, r *http.Request) error {
 		if *traceEnabled {
 			rw.Header().Set("lb-from", dst)
 		}
-		log.Println("fwd", resp.StatusCode, resp.Request.URL)
+		log.Println("forward", resp.StatusCode, resp.Request.URL)
 		rw.WriteHeader(resp.StatusCode)
 		defer resp.Body.Close()
 		_, err := io.Copy(rw, resp.Body)
@@ -87,6 +89,37 @@ func forward(dst string, rw http.ResponseWriter, r *http.Request) error {
 		rw.WriteHeader(http.StatusServiceUnavailable)
 		return err
 	}
+}
+
+func getHash(in string) (result uint64) {
+	h := fnv.New64()
+	h.Write([]byte(in))
+	result = h.Sum64()
+	return
+}
+
+func getHealthyServers() (result []string) {
+	for server := range serversStates {
+		if serversStates[server] {
+			result = append(result, server)
+		}
+	}
+	return
+}
+
+func getServer(r *http.Request) (server string, err error) {
+	healthyServers := getHealthyServers()
+
+	if len(healthyServers) == 0 {
+		err = errors.New("no healthy servers")
+		return
+	}
+
+	addr := r.RemoteAddr
+	hashNum := getHash(addr)
+	serverNum := hashNum % uint64(len(healthyServers))
+	server = serversPool[serverNum]
+	return
 }
 
 func main() {
@@ -105,7 +138,17 @@ func main() {
 
 	frontend := httptools.CreateServer(*port, http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 		// TODO: Рееалізуйте свій алгоритм балансувальника.
-		forward(serversPool[0], rw, r)
+		// Наш алгоритм балансувальника використовую хеш адреси клієнта
+		// Отже, можемо використати serverIndex = hash(req.RemoteAddr) % len(serversPool)
+		server, err := getServer(r)
+
+		if err != nil {
+			log.Printf("Failed to get server: %s", err)
+			rw.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
+		log.Printf("Forwarding request %v to %v", r, server)
+		forward(server, rw, r)
 	}))
 
 	log.Println("Starting load balancer...")
