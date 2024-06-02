@@ -132,3 +132,47 @@ func (s *BalancerSuite) Test_getServer(c *C) {
 		}
 	}
 }
+
+func (s *BalancerSuite) Test_getHash(c *C) {
+	randomAddresses := []string{
+		"220.216.32.147:22166",
+		"136.59.94.139:52910",
+		"76.241.221.109:58354",
+		"231.131.206.235:57372",
+		"153.97.93.1:23218",
+		"197.29.20.129:38109",
+		"120.65.92.149:21862",
+		"183.158.32.207:65448",
+		"107.216.47.215:43163",
+		"24.59.32.47:62307",
+		"133.65.232.138:50517",
+		"210.230.55.249:28408",
+		"238.51.66.183:24121",
+		"19.191.55.215:33057",
+		"148.90.88.192:1262",
+		"187.7.137.127:43996",
+		"240.176.63.40:16514",
+		"226.230.4.40:65444",
+		"87.76.11.182:42912",
+		"9.105.58.169:12826",
+	}
+
+	duplicatedAddresses := []string{
+		"220.216.32.147:22166",
+		"220.216.32.147:22166",
+		"220.216.32.147:22166",
+		"220.216.32.147:22166",
+		"220.216.32.147:22166",
+	}
+	resultHashes := []uint64{}
+	for _, address := range randomAddresses {
+		hash := getHash(address)
+		c.Assert(slices.Contains(resultHashes, hash), Equals, false)
+		resultHashes = append(resultHashes, hash)
+	}
+	dupHashes := []uint64{getHash(duplicatedAddresses[0])}
+	for _, address := range duplicatedAddresses {
+		hash := getHash(address)
+		c.Assert(slices.Contains(dupHashes, hash), Equals, true)
+	}
+}
