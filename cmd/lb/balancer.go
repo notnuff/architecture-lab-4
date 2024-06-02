@@ -14,19 +14,24 @@ import (
 )
 
 var (
-	port = flag.Int("port", 8090, "load balancer port")
+	port       = flag.Int("port", 8090, "load balancer port")
 	timeoutSec = flag.Int("timeout-sec", 3, "request timeout time in seconds")
-	https = flag.Bool("https", false, "whether backends support HTTPs")
+	https      = flag.Bool("https", false, "whether backends support HTTPs")
 
 	traceEnabled = flag.Bool("trace", false, "whether to include tracing information into responses")
 )
 
 var (
-	timeout = time.Duration(*timeoutSec) * time.Second
+	timeout     = time.Duration(*timeoutSec) * time.Second
 	serversPool = []string{
 		"server1:8080",
 		"server2:8080",
 		"server3:8080",
+	}
+	serversStates = map[string]bool{
+		"server1:8080": false,
+		"server2:8080": false,
+		"server3:8080": false,
 	}
 )
 
@@ -87,12 +92,13 @@ func forward(dst string, rw http.ResponseWriter, r *http.Request) error {
 func main() {
 	flag.Parse()
 
-	// TODO: Використовуйте дані про стан сервреа, щоб підтримувати список тих серверів, яким можна відправляти ззапит.
+	// DONE: Використовуйте дані про стан сервреа, щоб підтримувати список тих серверів, яким можна відправляти ззапит.
 	for _, server := range serversPool {
 		server := server
 		go func() {
 			for range time.Tick(10 * time.Second) {
 				log.Println(server, health(server))
+				serversStates[server] = health(server)
 			}
 		}()
 	}
