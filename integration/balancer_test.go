@@ -6,6 +6,8 @@ import (
 	"os"
 	"testing"
 	"time"
+
+	. "gopkg.in/check.v1"
 )
 
 const baseAddress = "http://balancer:8090"
