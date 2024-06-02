@@ -21,6 +21,10 @@ func TestBalancer(t *testing.T) {
 	TestingT(t)
 }
 
+type BalancerSuite struct{}
+
+var _ = Suite(&BalancerSuite{})
+
 func BenchmarkBalancer(b *testing.B) {
 	// TODO: Реалізуйте інтеграційний бенчмарк для балансувальникка.
 }
