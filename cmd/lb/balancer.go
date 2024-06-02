@@ -9,6 +9,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/roman-mazur/architecture-practice-4-template/httptools"
@@ -30,11 +31,7 @@ var (
 		"server2:8080",
 		"server3:8080",
 	}
-	serversStates = map[string]bool{
-		//"server1:8080": false,
-		//"server2:8080": false,
-		//"server3:8080": false,
-	}
+	serversStates = map[string]bool{}
 )
 
 func scheme() string {
@@ -118,7 +115,7 @@ func getServer(r *http.Request) (server string, err error) {
 	addr := r.RemoteAddr
 	hashNum := getHash(addr)
 	serverNum := hashNum % uint64(len(healthyServers))
-	server = serversPool[serverNum]
+	server = healthyServers[serverNum]
 	return
 }
 
@@ -126,18 +123,22 @@ func main() {
 	flag.Parse()
 
 	// DONE: Використовуйте дані про стан сервреа, щоб підтримувати список тих серверів, яким можна відправляти ззапит.
+
+	var lock sync.Mutex
 	for _, server := range serversPool {
 		server := server
 		go func() {
 			for range time.Tick(10 * time.Second) {
+				lock.Lock()
 				log.Println(server, health(server))
 				serversStates[server] = health(server)
+				lock.Unlock()
 			}
 		}()
 	}
 
 	frontend := httptools.CreateServer(*port, http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-		// TODO: Рееалізуйте свій алгоритм балансувальника.
+		// DONE: Рееалізуйте свій алгоритм балансувальника.
 		// Наш алгоритм балансувальника використовую хеш адреси клієнта
 		// Отже, можемо використати serverIndex = hash(req.RemoteAddr) % len(serversPool)
 		server, err := getServer(r)
@@ -147,7 +148,7 @@ func main() {
 			rw.WriteHeader(http.StatusServiceUnavailable)
 			return
 		}
-		log.Printf("Forwarding request %v to %v", r, server)
+		log.Printf("Forwarding request %s to %s", r.RemoteAddr, server)
 		forward(server, rw, r)
 	}))
 
