@@ -2,6 +2,7 @@ package integration
 
 import (
 	"net/http"
+	"slices"
 	"testing"
 	"time"
 
@@ -75,5 +76,66 @@ func (s *BalancerSuite) Test_getHealthyServers(c *C) {
 			continue
 		}
 		c.Assert(gotResult, DeepEquals, tt.wantResult)
+	}
+}
+
+func (s *BalancerSuite) Test_getServer(c *C) {
+	serversPool = []string{
+		"server1:8080",
+		"server2:8080",
+		"server3:8080",
+	}
+
+	tests := []struct {
+		name          string
+		r             *http.Request
+		serversStates map[string]bool
+		wantedServers []string
+		wantErr       bool
+	}{
+		{
+			"test no available servers",
+			&http.Request{RemoteAddr: "127.0.0.1:6051"},
+			map[string]bool{
+				"server1:8080": false,
+				"server2:8080": false,
+				"server3:8080": false,
+			},
+			[]string{},
+			true,
+		},
+		{
+			"test one available server",
+			&http.Request{RemoteAddr: "127.0.0.1:6053"},
+			map[string]bool{
+				"server1:8080": false,
+				"server2:8080": true,
+				"server3:8080": false,
+			},
+			[]string{"server2:8080"},
+			false,
+		},
+		{
+			"test two available servers",
+			&http.Request{RemoteAddr: "127.0.0.1:6054"},
+			map[string]bool{
+				"server1:8080": false,
+				"server2:8080": true,
+				"server3:8080": true,
+			},
+			[]string{"server2:8080", "server3:8080"},
+			false,
+		},
+	}
+	for _, tt := range tests {
+		serversStates = tt.serversStates
+		gotServer, err := getServer(tt.r)
+
+		if tt.wantErr {
+			c.Assert(err, NotNil)
+		} else {
+			c.Assert(err, IsNil)
+			c.Assert(slices.Contains(tt.wantedServers, gotServer), Equals, true)
+		}
 	}
 }
