@@ -3,35 +3,36 @@ package integration
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"testing"
 	"time"
 
 	. "gopkg.in/check.v1"
 )
 
-const baseAddress = "http://localhost:8090"
+const baseAddress = "http://balancer:8090"
 
 var client = http.Client{
 	Timeout: 3 * time.Second,
 }
 
-func Test(t *testing.T) { TestingT(t) }
+func Test(t *testing.T) {
+	if _, exists := os.LookupEnv("INTEGRATION_TEST"); !exists {
+		t.Skip("Integration test is not enabled")
+	}
+	TestingT(t)
+}
 
 type TestBalancerSuite struct{}
 
 var _ = Suite(&TestBalancerSuite{})
 
 func (s *TestBalancerSuite) TestBalancer(c *C) {
-	//if _, exists := os.LookupEnv("INTEGRATION_TEST"); !exists {
-	//	t.Skip("Integration test is not enabled")
-	//}
-
 	// DONE: Реалізуйте інтеграційний тест для балансувальникка.
 	// В цьому тесті, на мою думку, варто погратися із математичною статистикою, і, скажімо, подивитися на
 	// кінцеві використання кожного із серверів. Якщо використання кожного із серверів більш-менш рівномірне,
 	// то і балансувальник працює правильно. Хоч це і не ідеально точний тест, проте він достатньо точний
-	// для наших потреб. А ще, це прикольне застосування теорії ймовірностей у теорії програмування)
-
+	// для наших потреб. А ще, це прикольне застосування теорії ймовірностей у теорії програмування
 	serversUses := map[string]int{}
 
 	numOfRequests := 10000
@@ -49,7 +50,7 @@ func (s *TestBalancerSuite) TestBalancer(c *C) {
 	c.Logf("servers usages: %v", serversUses)
 	numOfServers := len(serversUses)
 	targetServerUsage := 1.0 / float64(numOfServers)
-	acceptableStatisticalError := 0.1 * targetServerUsage
+	acceptableStatisticalError := -1 * targetServerUsage
 	acceptableUsagePerServer := targetServerUsage - acceptableStatisticalError
 	c.Logf("acceptable usage per server: %f", acceptableUsagePerServer)
 
@@ -58,7 +59,7 @@ func (s *TestBalancerSuite) TestBalancer(c *C) {
 		c.Logf("[%s] server percentage usage: %f", s, serverPercentageLoad)
 
 		if serverPercentageLoad <= acceptableUsagePerServer {
-			c.Error("server percentage is too small", s, serverPercentageLoad)
+			c.Errorf("server percentage is too small: [%s] - %f, target usage: %f", s, serverPercentageLoad, acceptableUsagePerServer)
 		}
 	}
 
