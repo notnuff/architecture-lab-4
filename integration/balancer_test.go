@@ -50,7 +50,7 @@ func (s *TestBalancerSuite) TestBalancer(c *C) {
 	c.Logf("servers usages: %v", serversUses)
 	numOfServers := len(serversUses)
 	targetServerUsage := 1.0 / float64(numOfServers)
-	acceptableStatisticalError := -1 * targetServerUsage
+	acceptableStatisticalError := 0.1 * targetServerUsage
 	acceptableUsagePerServer := targetServerUsage - acceptableStatisticalError
 	c.Logf("acceptable usage per server: %f", acceptableUsagePerServer)
 
