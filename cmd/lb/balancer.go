@@ -124,6 +124,11 @@ func main() {
 
 	// DONE: Використовуйте дані про стан сервреа, щоб підтримувати список тих серверів, яким можна відправляти ззапит.
 
+	// ініціалізація станів серверів, щоб інтеграційний тест було можливо пройти
+	for _, server := range serversPool {
+		serversStates[server] = health(server)
+	}
+
 	var lock sync.Mutex
 	for _, server := range serversPool {
 		server := server

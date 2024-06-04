@@ -62,9 +62,21 @@ func (s *TestBalancerSuite) TestBalancer(c *C) {
 			c.Errorf("server percentage is too small: [%s] - %f, target usage: %f", s, serverPercentageLoad, acceptableUsagePerServer)
 		}
 	}
-
 }
 
 func BenchmarkBalancer(b *testing.B) {
-	// TODO: Реалізуйте інтеграційний бенчмарк для балансувальникка.
+	// DONE: Реалізуйте інтеграційний бенчмарк для балансувальникка.
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		b.RunParallel(func(pb *testing.PB) {
+			for pb.Next() {
+				resp, err := client.Get(fmt.Sprintf("%s/api/v1/some-data", baseAddress))
+				if err != nil {
+					b.Error(err)
+				}
+				resp.Body.Close()
+			}
+		})
+	}
 }
